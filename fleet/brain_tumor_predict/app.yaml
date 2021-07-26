@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+   name: inference-deployment
+   labels:
+     app: inferenceserver
+spec:
+   selector:
+     matchLabels:
+       app: inferenceserver
+   template:
+     metadata:
+       labels:
+         app: inferenceserver
+     spec:
+       #hostNetwork: true
+       initContainers:
+       - name: s3client
+         image: amazon/aws-cli
+         args: ["s3", "sync", "s3://braintumormodel", "/models"]
+         #args: ["--version"]
+         volumeMounts:
+         - mountPath: /root/.aws
+           name: awscreds
+         - mountPath: /models
+           name: models-path
+       containers:
+       - name: inferenceserver
+         image: customerzero/mlops:edge
+         #args: ["/bin/sh", "-c", "python3", "app.yaml"]
+         volumeMounts:
+         - mountPath: /model
+           name: models-path
+         - mountPath: /data
+           name: data-path
+         ports:
+         - containerPort: 5000
+       volumes:
+         - name: models-path
+           hostPath:
+             path: /home/siva/workspace/brain_tumor_prediction/model_test
+         - name: data-path
+           hostPath:
+             path: /home/siva/workspace/brain_tumor_prediction/dataset
+         - name: awscreds
+           hostPath:
+             path: /root/.aws
